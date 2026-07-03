@@ -12,7 +12,5 @@
   "requirements": [
     "pyfamilysafety==1.1.2"
   ],
-  "ssdp": [],
-  "version": "1.2.0",
-  "zeroconf": []
+  "version": "1.2.0"
 }

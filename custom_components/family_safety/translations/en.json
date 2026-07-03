@@ -57,6 +57,14 @@
             }
         }
     },
+    "exceptions": {
+        "invalid_request_id": {
+            "message": "The provided request ID is not valid or is no longer pending."
+        },
+        "application_not_found": {
+            "message": "Application {name} was not found on this account."
+        }
+    },
     "services": {
         "block_app": {
             "name": "Block Application",

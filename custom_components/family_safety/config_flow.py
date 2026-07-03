@@ -14,7 +14,6 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
@@ -85,11 +84,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             config_entry: config_entries.ConfigEntry
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlow(config_entry=config_entry)
+        return OptionsFlow()
 
     async def async_step_user(
             self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle the intial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -112,13 +111,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(
             self, entry_data: Mapping[str, Any]
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle a reauthentication request."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
             self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Ask the user for a fresh OAuth response URL."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -152,7 +151,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
+class OptionsFlow(config_entries.OptionsFlow):
     """An options flow for HASS."""
 
     family_safety: FamilySafety = None
@@ -166,7 +165,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             config = self.config_entry.options.get(key)
         return config
 
-    async def _async_save_options(self, **kwargs) -> config_entries.FlowResult:
+    async def _async_save_options(self, **kwargs) -> config_entries.ConfigFlowResult:
         """Save the options, merging overrides with the existing config."""
         update_interval = self._get_config_entry("update_interval")
         if kwargs.get("update_interval", None) is not None:
@@ -197,7 +196,8 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             expr = CONF_EXPR_DEFAULT
 
         await self.family_safety.api.end_session()
-        self.options.update({
+        options = dict(self.config_entry.options)
+        options.update({
             "refresh_token": refresh_token,
             "update_interval": update_interval,
             "tracked_applications": tracked_applications,
@@ -206,12 +206,12 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
         })
         return self.async_create_entry(
             title=self.config_entry.title,
-            data=self.options
+            data=options
         )
 
     async def async_step_auth(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Auth step."""
         if user_input is not None:
             return await self._async_save_options(
@@ -242,7 +242,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
 
     async def async_step_applications(
             self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Application configuration step."""
         if user_input is not None:
             tracked_applications = []
@@ -280,7 +280,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
 
     async def async_step_accounts(
             self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Accounts step."""
 
         if user_input is not None:
@@ -325,7 +325,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """First step."""
         self.family_safety = await FamilySafety.create(
             token=self.config_entry.data["refresh_token"],

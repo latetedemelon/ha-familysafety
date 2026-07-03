@@ -57,6 +57,14 @@
       }
     }
   },
+  "exceptions": {
+    "invalid_request_id": {
+      "message": "O ID do pedido fornecido não é válido ou já não está pendente."
+    },
+    "application_not_found": {
+      "message": "A aplicação {name} não foi encontrada nesta conta."
+    }
+  },
   "services": {
     "block_app": {
       "name": "Bloquear aplicação",

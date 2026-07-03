@@ -53,13 +53,24 @@ class ManagedAccountEntity(CoordinatorEntity, Entity):
             entry_type=dr.DeviceEntryType.SERVICE
         )
 
+    def _get_application_by_name(self, name: str) -> Application:
+        """Return the application with the given name."""
+        matches = [a for a in self._account.applications if a.name == name]
+        if not matches:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="application_not_found",
+                translation_placeholders={"name": name}
+            )
+        return matches[0]
+
     async def async_block_application(self, name: str):
         """Blocks a application with a given app name."""
-        await [a for a in self._account.applications if a.name == name][0].block_app()
+        await self._get_application_by_name(name).block_app()
 
     async def async_unblock_application(self, name: str):
         """Blocks a application with a given app name."""
-        await [a for a in self._account.applications if a.name == name][0].unblock_app()
+        await self._get_application_by_name(name).unblock_app()
 
     async def async_approve_request(self, request_id: str, extension_time: int):
         """Approve a pending request."""
@@ -68,22 +79,22 @@ class ManagedAccountEntity(CoordinatorEntity, Entity):
                 request_id=request_id,
                 extension_time=extension_time
             )
-        except ValueError:
+        except ValueError as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_request_id"
-            )
+            ) from err
         self.schedule_update_ha_state()
 
     async def async_deny_request(self, request_id: str):
         """Deny a pending request."""
         try:
             await self.coordinator.api.deny_pending_request(request_id=request_id)
-        except ValueError:
+        except ValueError as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_request_id"
-            )
+            ) from err
         self.schedule_update_ha_state()
 
 

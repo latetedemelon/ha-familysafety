@@ -1,12 +1,15 @@
-"""Diagnostics support for Reolink."""
+"""Diagnostics support for Microsoft Family Safety."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
 from .config_entry import FamilySafetyConfigEntry
+
+TO_REDACT = {"id", "acc_balance"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -57,4 +60,4 @@ async def async_get_config_entry_diagnostics(
             })
         diagnostic_data["accounts"].append(acc_data)
 
-    return diagnostic_data
+    return async_redact_data(diagnostic_data, TO_REDACT)

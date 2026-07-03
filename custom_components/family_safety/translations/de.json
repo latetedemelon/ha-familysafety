@@ -57,6 +57,14 @@
       }
     }
   },
+  "exceptions": {
+    "invalid_request_id": {
+      "message": "Die angegebene Anfrage-ID ist ungültig oder nicht mehr ausstehend."
+    },
+    "application_not_found": {
+      "message": "Die Anwendung {name} wurde in diesem Konto nicht gefunden."
+    }
+  },
   "services": {
     "block_app": {
       "name": "Anwendung blockieren",

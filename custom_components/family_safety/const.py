@@ -1,4 +1,4 @@
-"""Constants for integration_blueprint."""
+"""Constants for the Microsoft Family Safety integration."""
 from logging import Logger, getLogger
 from pyfamilysafety.account import OverrideTarget
 
