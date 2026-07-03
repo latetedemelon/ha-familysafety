@@ -201,10 +201,7 @@ class GenericSensor(ManagedAccountEntity, SensorEntity):
             }
 
 class ScreentimeLimitSensor(GenericSensor, SensorEntity):
-    """Report the screentime allowed for today"""
-    def __init__(self, coordinator: FamilySafetyCoordinator,
-                 description: FamilySafetySensorEntityDescription, idx, account_id) -> None:
-        super().__init__(coordinator, description, idx, account_id)
+    """Report the screentime allowed for today."""
 
 class ScreentimeSensor(GenericSensor, SensorEntity):
     """Aggregate screentime sensor."""
