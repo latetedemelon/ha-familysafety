@@ -124,8 +124,8 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             config = self.config_entry.options.get(key)
         return config
 
-    async def async_create_entry(self, **kwargs) -> config_entries.FlowResult:
-        """Create an entry using optional overrides."""
+    async def _async_save_options(self, **kwargs) -> config_entries.FlowResult:
+        """Save the options, merging overrides with the existing config."""
         update_interval = self._get_config_entry("update_interval")
         if kwargs.get("update_interval", None) is not None:
             update_interval = kwargs.get("update_interval")
@@ -162,7 +162,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             "accounts": accounts,
             CONF_KEY_EXPR: expr
         })
-        return super().async_create_entry(
+        return self.async_create_entry(
             title=self.config_entry.title,
             data=self.options
         )
@@ -172,7 +172,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
     ) -> config_entries.FlowResult:
         """Auth step."""
         if user_input is not None:
-            return await self._async_create_entry(
+            return await self._async_save_options(
                 refresh_token=user_input["refresh_token"],
                 update_interval=user_input["update_interval"]
             )
@@ -208,7 +208,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             for app in user_input.get("tracked_applications", []):
                 tracked_applications.append(
                     _get_application_id(app, applications))
-            return await self.async_create_entry(
+            return await self._async_save_options(
                 tracked_applications=tracked_applications
             )
 
@@ -248,7 +248,7 @@ class OptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                     tracked_user_ids.append(
                         _get_account_id(user, self.family_safety.accounts)
                     )
-            return await self.async_create_entry(
+            return await self._async_save_options(
                 accounts=tracked_user_ids,
                 experimental=user_input.get(CONF_KEY_EXPR, CONF_EXPR_DEFAULT)
             )

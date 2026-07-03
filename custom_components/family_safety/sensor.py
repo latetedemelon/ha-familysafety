@@ -12,6 +12,7 @@ from pyfamilysafety import Account
 from pyfamilysafety.application import Application
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
@@ -63,7 +64,7 @@ TIME_SENSORS: dict[str, FamilySafetySensorEntityDescription] = {
         value_fn=lambda data: (
             data._account.today_screentime_usage / 1000) / 60,
         device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement_fn=lambda data: "min",
+        native_unit_of_measurement_fn=lambda data: UnitOfTime.MINUTES,
         name_fn=lambda data: f"{data._account.first_name} Used Screen Time"
     )
 }
@@ -87,10 +88,10 @@ async def async_setup_entry(
                     description=FamilySafetySensorEntityDescription(
                         key=app,
                         device_class=SensorDeviceClass.DURATION,
-                        native_unit_of_measurement_fn=lambda data: "min",
-                        value_fn=lambda data: data._account.get_application(
-                                app).usage,
-                        name_fn=lambda data: f"{data._account.first_name} {data._account.get_application(app).name} Used Screen Time"),
+                        native_unit_of_measurement_fn=lambda data: UnitOfTime.MINUTES,
+                        value_fn=lambda data, app_id=app: data._account.get_application(
+                                app_id).usage,
+                        name_fn=lambda data, app_id=app: f"{data._account.first_name} {data._account.get_application(app_id).name} Used Screen Time"),
                     idx=None,
                     account_id=account.user_id
                 ))
@@ -100,7 +101,7 @@ async def async_setup_entry(
                     key="screentime_limit",
                     value_fn=lambda data: (data._account.today_restriction / 1000) / 60,
                     device_class=SensorDeviceClass.DURATION,
-                    native_unit_of_measurement_fn=lambda data: "seconds",
+                    native_unit_of_measurement_fn=lambda data: UnitOfTime.MINUTES,
                     name_fn=lambda data: f"{data._account.first_name} Available Screen Time Today"
                 ),
                 idx=None,

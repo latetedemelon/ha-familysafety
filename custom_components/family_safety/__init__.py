@@ -2,18 +2,17 @@
 
 import logging
 
-from pyfamilysafety import FamilySafety, Authenticator
+from pyfamilysafety import FamilySafety
 from pyfamilysafety.exceptions import HttpException, Unauthorized, AggregatorException
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
-    HomeAssistantError
+    ConfigEntryNotReady
 )
 
-from .const import DOMAIN, AGG_ERROR, CONF_EXPR_DEFAULT, CONF_KEY_EXPR
+from .const import AGG_ERROR, CONF_EXPR_DEFAULT, CONF_KEY_EXPR
 from .coordinator import FamilySafetyCoordinator
 from .config_entry import FamilySafetyConfigEntry
 
@@ -23,36 +22,34 @@ PLATFORMS = [Platform.SENSOR, Platform.SWITCH]
 
 async def async_setup_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry) -> bool:
     """Create ConfigEntry."""
-    hass.data.setdefault(DOMAIN, {})
     _LOGGER.debug("Got request to setup entry.")
     try:
-
-        auth = await Authenticator.create(
+        familysafety = await FamilySafety.create(
             token=entry.options.get(
-                "refresh_token", entry.options.get("refresh_token", entry.data.get("refresh_token"))),
-            use_refresh_token=True)
-        familysafety = FamilySafety(auth=auth)
-        familysafety.experimental = entry.options.get(CONF_KEY_EXPR, CONF_EXPR_DEFAULT)
-
-        _LOGGER.debug("Login successful, setting up coordinator.")
-        entry.runtime_data = FamilySafetyCoordinator(
-            hass,
-            familysafety,
-            entry.options.get("update_interval", entry.data["update_interval"]))
-        # no need to fetch initial data as this is already handled on creation
-    except AggregatorException as err:
-        _LOGGER.error(AGG_ERROR)
-        raise CannotConnect from err
+                "refresh_token", entry.data.get("refresh_token")),
+            use_refresh_token=True,
+            experimental=entry.options.get(CONF_KEY_EXPR, CONF_EXPR_DEFAULT))
     except Unauthorized as err:
         raise ConfigEntryAuthFailed from err
+    except AggregatorException as err:
+        _LOGGER.error(AGG_ERROR)
+        raise ConfigEntryNotReady(AGG_ERROR) from err
     except HttpException as err:
-        _LOGGER.error(err)
-        raise CannotConnect from err
+        raise ConfigEntryNotReady(
+            f"Error connecting to Family Safety: {err}") from err
     except Exception as err:
-        _LOGGER.error(err)
-        raise CannotConnect from err
+        _LOGGER.exception("Unexpected error setting up Family Safety")
+        raise ConfigEntryNotReady(str(err)) from err
 
-    async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
+    _LOGGER.debug("Login successful, setting up coordinator.")
+    entry.runtime_data = FamilySafetyCoordinator(
+        hass,
+        entry,
+        familysafety,
+        entry.options.get("update_interval", entry.data["update_interval"]))
+    # no need to fetch initial data as this is already handled on creation
+
+    async def update_listener(hass: HomeAssistant, entry: FamilySafetyConfigEntry):
         """Update listener."""
         await hass.config_entries.async_reload(entry.entry_id)
 
@@ -62,15 +59,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading config entry %s", entry.entry_id)
-    await hass.data[DOMAIN][entry.entry_id].api.api.end_session()
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-
+        await entry.runtime_data.api.api.end_session()
     return unload_ok
-
-
-class CannotConnect(HomeAssistantError):
-    """Error to indicate we cannot connect."""
