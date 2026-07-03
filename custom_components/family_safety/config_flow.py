@@ -17,7 +17,7 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
-from .const import DOMAIN, CONF_EXPR_DEFAULT, CONF_KEY_EXPR
+from .const import DOMAIN, CONF_EXPR_DEFAULT, CONF_KEY_EXPR, DOCS_URL, MS_LOGIN_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             config_entry: config_entries.ConfigEntry
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlow()
+        return OptionsFlow(config_entry)
 
     async def async_step_user(
             self, user_input: dict[str, Any] | None = None
@@ -106,7 +106,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=CONFIG_SCHEMA,
-            errors=errors
+            errors=errors,
+            description_placeholders={
+                "docs_url": DOCS_URL,
+                "login_url": MS_LOGIN_URL
+            }
         )
 
     async def async_step_reauth(
@@ -147,7 +151,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required("response_url"): str}),
-            errors=errors
+            errors=errors,
+            description_placeholders={"login_url": MS_LOGIN_URL}
         )
 
 
@@ -156,13 +161,19 @@ class OptionsFlow(config_entries.OptionsFlow):
 
     family_safety: FamilySafety = None
 
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Create the options flow."""
+        # stored under a private name: the config_entry property only
+        # exists on the OptionsFlow base class from HA 2024.12 onwards
+        self._entry = config_entry
+
     def _get_config_entry(self, key):
         """Return the specific config entry."""
-        config = self.config_entry.data.get(key, None)
-        if (self.config_entry.options) and (
-            self.config_entry.options.get(key, None) is not None
+        config = self._entry.data.get(key, None)
+        if (self._entry.options) and (
+            self._entry.options.get(key, None) is not None
         ):
-            config = self.config_entry.options.get(key)
+            config = self._entry.options.get(key)
         return config
 
     async def _async_save_options(self, **kwargs) -> config_entries.ConfigFlowResult:
@@ -196,7 +207,7 @@ class OptionsFlow(config_entries.OptionsFlow):
             expr = CONF_EXPR_DEFAULT
 
         await self.family_safety.api.end_session()
-        options = dict(self.config_entry.options)
+        options = dict(self._entry.options)
         options.update({
             "refresh_token": refresh_token,
             "update_interval": update_interval,
@@ -205,7 +216,7 @@ class OptionsFlow(config_entries.OptionsFlow):
             CONF_KEY_EXPR: expr
         })
         return self.async_create_entry(
-            title=self.config_entry.title,
+            title=self._entry.title,
             data=options
         )
 
@@ -219,14 +230,14 @@ class OptionsFlow(config_entries.OptionsFlow):
                 update_interval=user_input["update_interval"]
             )
 
-        refresh_token = self.config_entry.data["refresh_token"]
-        if self.config_entry.options:
-            refresh_token = self.config_entry.options.get(
+        refresh_token = self._entry.data["refresh_token"]
+        if self._entry.options:
+            refresh_token = self._entry.options.get(
                 "refresh_token", refresh_token)
 
-        update_interval = self.config_entry.data["update_interval"]
-        if self.config_entry.options:
-            update_interval = self.config_entry.options.get(
+        update_interval = self._entry.data["update_interval"]
+        if self._entry.options:
+            update_interval = self._entry.options.get(
                 "update_interval", update_interval)
 
         return self.async_show_form(
@@ -328,7 +339,7 @@ class OptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.ConfigFlowResult:
         """First step."""
         self.family_safety = await FamilySafety.create(
-            token=self.config_entry.data["refresh_token"],
+            token=self._entry.data["refresh_token"],
             use_refresh_token=True
         )
         return self.async_show_menu(
