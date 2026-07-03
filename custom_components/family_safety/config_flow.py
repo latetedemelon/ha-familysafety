@@ -2,6 +2,7 @@
 
 import contextlib
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from pyfamilysafety import FamilySafety
@@ -106,6 +107,47 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=CONFIG_SCHEMA,
+            errors=errors
+        )
+
+    async def async_step_reauth(
+            self, entry_data: Mapping[str, Any]
+    ) -> FlowResult:
+        """Handle a reauthentication request."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+            self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Ask the user for a fresh OAuth response URL."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                info = await validate_input(user_input)
+            except InvalidAuth as err:
+                _LOGGER.warning("Invalid authentication received: %s", err)
+                errors["base"] = "invalid_auth"
+            except CannotConnect as err:
+                _LOGGER.warning("Cannot connect: %s", err)
+                errors["base"] = "cannot_connect"
+            else:
+                entry = self.hass.config_entries.async_get_entry(
+                    self.context["entry_id"])
+                # options take priority over data when the integration loads,
+                # so the new token must be written to both
+                self.hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data,
+                          "refresh_token": info["refresh_token"]},
+                    options={**entry.options,
+                             "refresh_token": info["refresh_token"]}
+                )
+                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required("response_url"): str}),
             errors=errors
         )
 

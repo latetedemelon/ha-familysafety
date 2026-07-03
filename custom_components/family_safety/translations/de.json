@@ -8,13 +8,21 @@
           "response_url": "OAuth-Antwort-URL",
           "update_interval": "Aktualisierungsintervall"
         }
+      },
+      "reauth_confirm": {
+        "description": "Ihre Microsoft Family Safety-Authentifizierung ist abgelaufen. Klicken Sie auf diesen Link [Microsoft Login](https://login.live.com/oauth20_authorize.srf?cobrandid=b5d15d4b-695a-4cd5-93c6-13f551b310df&client_id=000000000004893A&response_type=code&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&response_mode=query&scope=service%3A%3Afamilymobile.microsoft.com%3A%3AMBI_SSL&lw=1&fl=easi2&login_hint=), um eine neue OAuth-Antwort-URL abzurufen.",
+        "data": {
+          "response_url": "OAuth-Antwort-URL"
+        }
       }
     },
     "error": {
-      "auth": "Ungültiges Token angegeben.",
-      "missing_input": "Ungültige Eingabe, es wird entweder ein Aktualisierungstoken oder eine Antwort-URL benötigt.",
-      "connection": "Verbindung zum Server konnte nicht hergestellt werden.",
+      "invalid_auth": "Ungültiges Token angegeben.",
+      "cannot_connect": "Verbindung zum Server konnte nicht hergestellt werden.",
       "unknown": "Ein unbekannter Fehler ist aufgetreten."
+    },
+    "abort": {
+      "reauth_successful": "Die erneute Authentifizierung war erfolgreich."
     }
   },
   "options": {
