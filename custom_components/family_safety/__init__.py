@@ -3,6 +3,7 @@
 import logging
 
 from pyfamilysafety import FamilySafety
+from pyfamilysafety.authenticator import Authenticator
 from pyfamilysafety.exceptions import HttpException, Unauthorized, AggregatorException
 
 from homeassistant.const import Platform
@@ -11,6 +12,7 @@ from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import AGG_ERROR, CONF_EXPR_DEFAULT, CONF_KEY_EXPR
 from .coordinator import FamilySafetyCoordinator
@@ -24,11 +26,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry)
     """Create ConfigEntry."""
     _LOGGER.debug("Got request to setup entry.")
     try:
-        familysafety = await FamilySafety.create(
+        auth = await Authenticator.create(
             token=entry.options.get(
                 "refresh_token", entry.data.get("refresh_token")),
             use_refresh_token=True,
-            experimental=entry.options.get(CONF_KEY_EXPR, CONF_EXPR_DEFAULT))
+            client_session=async_get_clientsession(hass))
+        familysafety = FamilySafety(auth)
+        familysafety.experimental = entry.options.get(
+            CONF_KEY_EXPR, CONF_EXPR_DEFAULT)
+        # first update populates the family roster and account data
+        await familysafety.update()
     except Unauthorized as err:
         raise ConfigEntryAuthFailed from err
     except AggregatorException as err:
@@ -47,7 +54,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry)
         entry,
         familysafety,
         entry.options.get("update_interval", entry.data["update_interval"]))
-    # no need to fetch initial data as this is already handled on creation
 
     async def update_listener(hass: HomeAssistant, entry: FamilySafetyConfigEntry):
         """Update listener."""
@@ -62,6 +68,5 @@ async def async_setup_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry)
 async def async_unload_entry(hass: HomeAssistant, entry: FamilySafetyConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading config entry %s", entry.entry_id)
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        await entry.runtime_data.api.api.end_session()
-    return unload_ok
+    # the aiohttp session is Home Assistant's shared one - nothing to close
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

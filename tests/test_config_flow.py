@@ -140,11 +140,17 @@ async def test_options_flow_auth_step(hass, setup_integration, mock_familysafety
     entry = setup_integration
 
     with patch(
-        "custom_components.family_safety.config_flow.FamilySafety.create",
-        AsyncMock(return_value=mock_familysafety),
+        "custom_components.family_safety.config_flow.Authenticator.create",
+        AsyncMock(return_value=MagicMock()),
     ), patch(
-        "custom_components.family_safety.FamilySafety.create",
-        AsyncMock(return_value=mock_familysafety),
+        "custom_components.family_safety.config_flow.FamilySafety",
+        MagicMock(return_value=mock_familysafety),
+    ), patch(
+        "custom_components.family_safety.Authenticator.create",
+        AsyncMock(return_value=MagicMock()),
+    ), patch(
+        "custom_components.family_safety.FamilySafety",
+        MagicMock(return_value=mock_familysafety),
     ):
         result = await hass.config_entries.options.async_init(entry.entry_id)
         assert result["type"] is FlowResultType.MENU
