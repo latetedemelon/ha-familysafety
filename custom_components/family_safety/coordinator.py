@@ -1,20 +1,25 @@
 """Family Safety data hub."""
 
-import contextlib
+import asyncio
 import logging
 from datetime import timedelta
 
-import async_timeout
-
-from homeassistant.core import HomeAssistant
 from pyfamilysafety import FamilySafety
-from pyfamilysafety.exceptions import AggregatorException
+from pyfamilysafety.exceptions import (
+    AggregatorException,
+    HttpException,
+    Unauthorized
+)
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed
 )
 
-from .const import NAME
+from .const import AGG_ERROR, NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +28,7 @@ class FamilySafetyCoordinator(DataUpdateCoordinator):
 
     def __init__(self,
                  hass: HomeAssistant,
+                 config_entry: ConfigEntry,
                  family_safety: FamilySafety,
                  update_interval: int=60) -> None:
         """Init the coordinator."""
@@ -30,6 +36,7 @@ class FamilySafetyCoordinator(DataUpdateCoordinator):
             hass=hass,
             logger=_LOGGER,
             name=NAME,
+            config_entry=config_entry,
             update_interval=timedelta(seconds=update_interval)
         )
         self.api: FamilySafety = family_safety
@@ -37,8 +44,11 @@ class FamilySafetyCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch and update data from the API."""
         try:
-            async with async_timeout.timeout(59):
-                with contextlib.suppress(AggregatorException):
-                    return await self.api.update()
-        except Exception as err:
-            raise UpdateFailed(f"Error communicating with API {err}") from err
+            async with asyncio.timeout(50):
+                return await self.api.update()
+        except Unauthorized as err:
+            raise ConfigEntryAuthFailed("Family Safety token expired") from err
+        except AggregatorException as err:
+            raise UpdateFailed(AGG_ERROR) from err
+        except HttpException as err:
+            raise UpdateFailed(f"Error communicating with API: {err}") from err

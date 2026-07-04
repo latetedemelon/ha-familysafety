@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest-homeassistant-custom-component==0.13.181
+# acme (pulled in via homeassistant 2024.11 -> hass_nabucasa) breaks with
+# josepy 2.x, which removed ComparableX509
+josepy<2

@@ -2,19 +2,27 @@
   "config": {
     "step": {
       "user": {
-        "description": "Se precisar de ajuda com a configuração, consulte aqui: https://github.com/pantherale0/ha-familysafety - Clique neste link [Login Microsoft](https://login.live.com/oauth20_authorize.srf?cobrandid=b5d15d4b-695a-4cd5-93c6-13f551b310df&client_id=000000000004893A&response_type=code&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&response_mode=query&scope=service%3A%3Afamilymobile.microsoft.com%3A%3AMBI_SSL&lw=1&fl=easi2&login_hint=) para obter o URL de resposta OAuth.",
+        "description": "Se precisar de ajuda com a configuração, consulte aqui: {docs_url} - Clique neste link [Login Microsoft]({login_url}) para obter o URL de resposta OAuth.",
         "data": {
           "refresh_token": "Token de atualização",
           "response_url": "URL de resposta OAuth",
           "update_interval": "Intervalo de atualização"
         }
+      },
+      "reauth_confirm": {
+        "description": "A sua autenticação do Microsoft Family Safety expirou. Clique neste link [Login Microsoft]({login_url}) para obter um novo URL de resposta OAuth.",
+        "data": {
+          "response_url": "URL de resposta OAuth"
+        }
       }
     },
     "error": {
-      "auth": "Token inválido fornecido.",
-      "missing_input": "Entrada inválida, requer um dos seguintes: refresh_token ou response_url.",
-      "connection": "Não foi possível ligar ao servidor.",
+      "invalid_auth": "Token inválido fornecido.",
+      "cannot_connect": "Não foi possível ligar ao servidor.",
       "unknown": "Ocorreu um erro desconhecido."
+    },
+    "abort": {
+      "reauth_successful": "A reautenticação foi bem-sucedida."
     }
   },
   "options": {
@@ -47,6 +55,14 @@
           "accounts": "Configurar contas recolhidas"
         }
       }
+    }
+  },
+  "exceptions": {
+    "invalid_request_id": {
+      "message": "O ID do pedido fornecido não é válido ou já não está pendente."
+    },
+    "application_not_found": {
+      "message": "A aplicação {name} não foi encontrada nesta conta."
     }
   },
   "services": {

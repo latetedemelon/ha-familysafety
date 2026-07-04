@@ -18,3 +18,29 @@ unblock_app:
       selector:
         text:
           multiline: False
+approve_request:
+  target:
+    entity:
+      integration: family_safety
+  fields:
+    request_id:
+      required: True
+      selector:
+        text:
+          multiline: False
+    extension_time:
+      required: True
+      selector:
+        number:
+          min: 0
+          mode: box
+deny_request:
+  target:
+    entity:
+      integration: family_safety
+  fields:
+    request_id:
+      required: True
+      selector:
+        text:
+          multiline: False
