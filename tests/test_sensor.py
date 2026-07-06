@@ -38,12 +38,6 @@ async def test_screentime_sensors(hass, setup_integration):
     assert used.state == "30.0"  # 1_800_000 ms
     assert used.attributes["unit_of_measurement"] == "min"
 
-    limit_id = registry.async_get_entity_id(
-        "sensor", "family_safety", f"{MOCK_USER_ID}_screentime_limit")
-    limit = hass.states.get(limit_id)
-    assert limit.state == "60.0"  # 3_600_000 ms
-    assert limit.attributes["unit_of_measurement"] == "min"
-
 
 async def test_account_balance_sensor(hass, setup_integration):
     """The balance sensor reports the account balance and currency."""

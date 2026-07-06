@@ -13,9 +13,10 @@ from pyfamilysafety.account import Account
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, CONF_EXPR_DEFAULT, CONF_KEY_EXPR, DOCS_URL, MS_LOGIN_URL
 
@@ -49,21 +50,20 @@ def _get_account_id(name: str, accounts: list[Account]):
     return [a for a in accounts if (f"{a.first_name} {a.surname}" == name)][0].user_id
 
 
-async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the input."""
     auth: Authenticator = None
     try:
         _LOGGER.debug("Config flow received -> test credentials")
         auth = await Authenticator.create(
             token=data["response_url"],
-            use_refresh_token=False
+            use_refresh_token=False,
+            client_session=async_get_clientsession(hass)
         )
     except HttpException as err:
-        _LOGGER.error(err)
-        raise InvalidAuth from err
+        raise InvalidAuth(str(err)) from err
     except Exception as err:
-        _LOGGER.error(err)
-        raise CannotConnect from err
+        raise CannotConnect(str(err)) from err
 
     _LOGGER.debug(
         "Authentication success, expiry time %s, returning refresh_token.", auth.expires)
@@ -93,7 +93,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(user_input)
+                info = await validate_input(self.hass, user_input)
                 user_input["refresh_token"] = info["refresh_token"]
                 return self.async_create_entry(title=info["title"], data=user_input)
             except InvalidAuth as err:
@@ -126,7 +126,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(user_input)
+                info = await validate_input(self.hass, user_input)
             except InvalidAuth as err:
                 _LOGGER.warning("Invalid authentication received: %s", err)
                 errors["base"] = "invalid_auth"
@@ -206,7 +206,6 @@ class OptionsFlow(config_entries.OptionsFlow):
         if expr is None:
             expr = CONF_EXPR_DEFAULT
 
-        await self.family_safety.api.end_session()
         options = dict(self._entry.options)
         options.update({
             "refresh_token": refresh_token,
@@ -338,10 +337,13 @@ class OptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """First step."""
-        self.family_safety = await FamilySafety.create(
-            token=self._entry.data["refresh_token"],
-            use_refresh_token=True
+        auth = await Authenticator.create(
+            token=self._get_config_entry("refresh_token"),
+            use_refresh_token=True,
+            client_session=async_get_clientsession(self.hass)
         )
+        self.family_safety = FamilySafety(auth)
+        await self.family_safety.update()
         return self.async_show_menu(
             step_id="init",
             menu_options=["auth", "applications", "accounts"]
